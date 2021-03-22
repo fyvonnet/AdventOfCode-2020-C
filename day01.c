@@ -5,15 +5,22 @@
 typedef array_type(int) int_array;
 
 
-int search (int_array input, int index, int entries, int sum, int product)
+int search (int_array input, int index, int n_entries, int sum, int product)
 {
-    if (entries == 0) { if (sum == 2020) return product; else return -1; }
-
-    if (index == array_size(input)) return -1;
-
-    int ret = search(input, index + 1, entries - 1, sum + array_ref(input, index), product * array_ref(input, index));
-    if (ret == -1) return search(input, index + 1, entries, sum, product);
-    else return ret;
+    if (n_entries == 0) {
+        if (sum == 2020)
+            return product;
+        else
+            return -1;
+    }
+    else {
+        for (int i = index ; i < array_size(input); i++) {
+            int entry = array_ref(input, i);
+            int ret = search(input, index + 1, n_entries - 1, sum + entry, product * entry);
+            if (ret != -1) return ret;
+        }
+        return -1;
+    }
 }
 
 
