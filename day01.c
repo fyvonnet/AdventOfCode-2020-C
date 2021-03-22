@@ -4,13 +4,25 @@
 
 typedef array_type(int) int_array;
 
+
+int search (int_array input, int index, int entries, int sum, int product)
+{
+    if (entries == 0) { if (sum == 2020) return product; else return -1; }
+
+    if (index == array_size(input)) return -1;
+
+    int ret = search(input, index + 1, entries - 1, sum + array_ref(input, index), product * array_ref(input, index));
+    if (ret == -1) return search(input, index + 1, entries, sum, product);
+    else return ret;
+}
+
+
 int main()
 {
     FILE *fp = fopen("inputs/day01", "r");
     int entry;
     int_array input;
     array_init(input);
-    int a, b, c;
 
     while ((fscanf(fp, "%d", &entry)) != EOF)
         array_add(input, int, entry);
@@ -18,35 +30,8 @@ int main()
     fclose(fp);
 
 
-    a = 0; b = 1;
-
-    while (array_ref(input, a) + array_ref(input, b) != 2020) {
-        b++;
-        if (b == array_size(input)) {
-            a++;
-            b = a + 1;
-        }
-    }
-
-    printf("%d\n", array_ref(input, a) * array_ref(input, b));
-
-
-    a = 0; b = 1; c = 2;
-
-    while (array_ref(input, a) + array_ref(input, b) + array_ref(input, c) != 2020) {
-        c++;
-        if (c == array_size(input)) {
-            b++;
-            if (b == array_size(input) - 1) {
-                a++;
-                b = a + 1;
-            }
-            c = b + 1;
-        }
-
-    }
-
-    printf("%d\n", array_ref(input, a) * array_ref(input, b) * array_ref(input, c));
+    printf("%d\n", search(input, 0, 2, 0, 1));
+    printf("%d\n", search(input, 0, 3, 0, 1));
 
 
     exit(EXIT_SUCCESS);
