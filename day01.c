@@ -5,21 +5,32 @@
 typedef array_type(int) int_array;
 
 
-int search (int_array input, int index, int n_entries, int sum, int product)
+int search (int_array input, int depth)
 {
-    if (n_entries == 0) {
-        if (sum == 2020)
-            return product;
-        else
-            return -1;
-    }
-    else {
-        for (int i = index ; i < array_size(input); i++) {
-            int entry = array_ref(input, i);
-            int ret = search(input, index + 1, n_entries - 1, sum + entry, product * entry);
-            if (ret != -1) return ret;
+    struct {
+        int prod;
+        int sum;
+        int index;
+    } data = { 1, 0, 0 }, saves[depth];
+
+    int layer = 0, len = array_size(input);
+
+    for(;;) {
+        if ((layer == depth) && (data.sum == 2020))
+            return data.prod;
+
+        if ((layer == depth) || (data.index == len)) {
+            layer--;
+            data = saves[layer];
+            data.index++;
         }
-        return -1;
+        else {
+            saves[layer] = data;
+            data.prod *= array_ref(input, data.index);
+            data.sum  += array_ref(input, data.index);
+            data.index++;
+            layer++;
+        }
     }
 }
 
@@ -37,8 +48,8 @@ int main()
     fclose(fp);
 
 
-    printf("%d\n", search(input, 0, 2, 0, 1));
-    printf("%d\n", search(input, 0, 3, 0, 1));
+    printf("%d\n", search(input, 2));
+    printf("%d\n", search(input, 3));
 
 
     exit(EXIT_SUCCESS);
