@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <pcre.h>
 #include <toylib.h>
@@ -111,7 +112,7 @@ int main()
     toyqueue_enqueue(q, (void *)"shiny gold");
 
     while (!toyqueue_empty(q)) {
-        int qt = (int)toyqueue_dequeue(q);
+        int qt = (uintptr_t)toyqueue_dequeue(q);
         char *name = (char *)toyqueue_dequeue(q);
 
         count += qt;
@@ -119,7 +120,7 @@ int main()
 
         if (bags)
             for (int i = 0; bags[i].name; i++) {
-                toyqueue_enqueue(q, (void *)(qt * bags[i].qt));
+                toyqueue_enqueue(q, (void *)(uintptr_t)(qt * bags[i].qt));
                 toyqueue_enqueue(q, (void *)bags[i].name);
             }
     }
