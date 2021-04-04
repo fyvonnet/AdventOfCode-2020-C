@@ -118,11 +118,10 @@ int main()
         count += qt;
         contained_bags *bags = toytree_search(bags_tree, name);
 
-        if (bags)
-            for (int i = 0; bags[i].name; i++) {
-                toyqueue_enqueue(q, (void *)(uintptr_t)(qt * bags[i].qt));
-                toyqueue_enqueue(q, (void *)bags[i].name);
-            }
+        for (int i = 0; bags[i].name; i++) {
+            toyqueue_enqueue(q, (void *)(uintptr_t)(qt * bags[i].qt));
+            toyqueue_enqueue(q, (void *)bags[i].name);
+        }
     }
 
     printf("%d\n", count);
