@@ -59,14 +59,16 @@ int contains_shiny_gold(uintptr_t bag, toytree *bags_tree, toytree *set, toyqueu
 
         if (cbs)
             for (int i = 0; (name = cbs[i].name); i++) {
-                if ((toytree_search(set, (void *)name)) || (name == shiny_gold_hash)) {
+                int found = (uintptr_t)toytree_search(set, (void *)name);
+                if ((found == 1) || (name == shiny_gold_hash)) {
                     toytree_insert(set, (void *)name, (void *)1);
                     return 1;
                 }
-                else
+                else if (found != -1)
                     toyqueue_enqueue(q, (void *)name);
             }
     }
+    toytree_insert(set, (void *)bag, (void *)-1);
     return 0;
 }
 
