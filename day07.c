@@ -17,17 +17,6 @@ int compare (const void *a, const void *b)
     return (uintptr_t)a - (uintptr_t)b;
 }
 
-char *get_match_string(char *str, int a, int b)
-{
-    size_t len = b - a;
-    char *match = malloc(len + 1);
-
-    memcpy(match, str + a, len);
-    match[len] = '\0';
-
-    return match;
-}
-
 uintptr_t get_match_hash(char *str, int a, int b)
 {
     uintptr_t hash = 5381;
@@ -97,9 +86,9 @@ int main()
     while (getline(&buffer, &n, fp) != EOF) {
         pcre_exec(re, NULL, buffer, strlen(buffer), 0, 0, offsets, OVECMAX);
         uintptr_t bag_name = get_match_hash(buffer, offsets[2], offsets[3]);
-        char *bags = get_match_string(buffer, offsets[4], offsets[5]);
+        char *bags = buffer + offsets[4];
 
-        if (strcmp(bags, "no other bags")) {
+        if (strncmp(bags, "no other bags", 13)) {
             char *token = strtok(bags, ",");
             contained_bags *cbs = malloc(6 * sizeof(contained_bags));
             int i = 0;
@@ -108,7 +97,6 @@ int main()
 
             for (i = 0; token != NULL; i++) {
                 pcre_exec(re2, NULL, token, strlen(token), 0, 0, offsets, OVECMAX);
-
                 cbs[i].qt   = get_match_int(token, offsets[2], offsets[3]);
                 cbs[i].name = get_match_hash(token, offsets[4], offsets[5]);
                 token = strtok(NULL, ",");
