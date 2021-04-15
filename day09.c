@@ -35,54 +35,64 @@ int sum_found(long num, long **sums, int start)
 int main()
 {
 
-    char *buffer = NULL; size_t n = 0;
-    long **sums;
-    int invalid_number;
+    long invalid_number = 0;
     array_long numbers;
 
     array_init(numbers);
 
-    FILE *fp = fopen("inputs/day09", "r");
-    while (getline (&buffer, &n, fp) != EOF) {
-        long num;
-        fscanf(fp, "%lu", &num);
-        array_add(numbers, long, num);
-    }
-    fclose(fp);
 
-    sums = malloc(array_size(numbers) * sizeof(long *));
+    {
+        char *buffer = NULL; size_t n = 0;
+        FILE *fp = fopen("inputs/day09", "r");
 
-    for (int i = 0; i < PREAMBLE_LEN; i++)
-        sums[i] = make_sums(numbers, i);
-
-    for (int i = PREAMBLE_LEN; i < array_size(numbers); i++) {
-        long n = array_ref(numbers, i);
-        if (!sum_found(n, sums, i - PREAMBLE_LEN)) {
-            invalid_number = n;
-            printf("%lu\n", n);
-            break;
+        while (getline (&buffer, &n, fp) != EOF) {
+            long num;
+            fscanf(fp, "%lu", &num);
+            array_add(numbers, long, num);
         }
-        sums[i] = make_sums(numbers, i);
+        fclose(fp);
     }
 
-    for (int i = 0; i < array_size(numbers); i++) {
-        int sum = array_ref(numbers, i);
-        for (int j = i + 1; j < array_size(numbers) - 1 && sum < invalid_number; j++) {
-            sum += array_ref(numbers, j);
-            if (sum == invalid_number) {
-                long min, max;
-                min = max = array_ref(numbers, i);
-                for (int k = i + 1; k <= j; k++) {
-                    long n = array_ref(numbers, k);
-                    if (n > max) max = n;
-                    if (n < min) min = n;
-                }
-                printf("%lu\n", min + max);
-                exit(EXIT_SUCCESS);
-            }
+    {
+        long **sums = malloc(array_size(numbers) * sizeof(long *));
+
+        for (int i = 0; i < PREAMBLE_LEN; i++)
+            sums[i] = make_sums(numbers, i);
+
+        for (int i = PREAMBLE_LEN; !invalid_number; i++) {
+            long n = array_ref(numbers, i);
+
+            if (!sum_found(n, sums, i - PREAMBLE_LEN))
+                invalid_number = n;
+            else
+                sums[i] = make_sums(numbers, i);
         }
+        printf("%lu\n", invalid_number);
     }
 
-    return(EXIT_FAILURE);
+    {
+        int i, j;
+        long sum = 0;
+
+        for (i = 0; sum != invalid_number; i++) {
+            sum = array_ref(numbers, i);
+            for (j = i + 1; j < array_size(numbers) - 1 && sum < invalid_number; j++)
+                sum += array_ref(numbers, j);
+        }
+
+        long min, max;
+        min = max = array_ref(numbers, i);
+
+        for (int k = i + 1; k <= j; k++) {
+            long n = array_ref(numbers, k);
+            if (n > max) max = n;
+            if (n < min) min = n;
+        }
+
+        printf("%lu\n", min + max);
+    }
+
+    exit(EXIT_SUCCESS);
+
 }
 
