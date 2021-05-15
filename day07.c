@@ -53,7 +53,7 @@ int contains_shiny_gold(uintptr_t bag, toytree *bags_tree, toytree *set, toyqueu
                     toytree_insert(set, (void *)bag, (void *)1);
                     return 1;
                 }
-                else if (found != -1)
+                else if (found == 0)
                     toyqueue_enqueue(q, (void *)name);
             }
     }
@@ -77,8 +77,8 @@ int main()
     pcre *re  = pcre_compile(pattern,  0, &err_msg, &err, NULL);
     pcre *re2 = pcre_compile(pattern2, 0, &err_msg, &err, NULL);
     FILE *fp = fopen("inputs/day07", "r");
-    toytree *bags_tree = toytree_new(compare);
-    toytree *set       = toytree_new(compare);
+    toytree *bags_tree = toytree_new(compare, NULL);
+    toytree *set       = toytree_new(compare, 0);
 
     array_int all_bags;
     array_init(all_bags);
