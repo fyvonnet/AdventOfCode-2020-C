@@ -10,6 +10,7 @@
 
 typedef struct { int qt; uintptr_t name; } contained_bags;
 typedef array_type(uintptr_t) array_int;
+typedef enum { CONTAINS, DOESNT_CONTAIN, UNKNOWN } bag_status;
 
 
 int compare (const void *a, const void *b)
@@ -37,7 +38,7 @@ int get_match_int(char *str, int a, int b)
     return n;
 }
 
-int contains_shiny_gold(uintptr_t bag, toytree *bags_tree, toytree *set, toyqueue *q, uintptr_t shiny_gold_hash)
+int contains_shiny_gold(uintptr_t bag, toytree *bags_tree, toytree *status_tree, toyqueue *q, uintptr_t shiny_gold_hash)
 {
     toyqueue_reset(q);
     toyqueue_enqueue(q, (void *)bag);
@@ -48,16 +49,16 @@ int contains_shiny_gold(uintptr_t bag, toytree *bags_tree, toytree *set, toyqueu
 
         if (cbs)
             for (int i = 0; (name = cbs[i].name); i++) {
-                int found = (uintptr_t)toytree_search(set, (void *)name);
-                if ((found == 1) || (name == shiny_gold_hash)) {
-                    toytree_insert(set, (void *)bag, (void *)1);
+                bag_status status = (uintptr_t)toytree_search(status_tree, (void *)name);
+                if ((status == CONTAINS) || (name == shiny_gold_hash)) {
+                    toytree_insert(status_tree, (void *)bag, (void *)CONTAINS);
                     return 1;
                 }
-                else if (found == 0)
+                else if (status == UNKNOWN)
                     toyqueue_enqueue(q, (void *)name);
             }
     }
-    toytree_insert(set, (void *)bag, (void *)-1);
+    toytree_insert(status_tree, (void *)bag, (void *)DOESNT_CONTAIN);
     return 0;
 }
 
@@ -77,8 +78,8 @@ int main()
     pcre *re  = pcre_compile(pattern,  0, &err_msg, &err, NULL);
     pcre *re2 = pcre_compile(pattern2, 0, &err_msg, &err, NULL);
     FILE *fp = fopen("inputs/day07", "r");
-    toytree *bags_tree = toytree_new(compare, NULL);
-    toytree *set       = toytree_new(compare, 0);
+    toytree *bags_tree   = toytree_new(compare, NULL);
+    toytree *status_tree = toytree_new(compare, (void *)UNKNOWN);
 
     array_int all_bags;
     array_init(all_bags);
@@ -112,7 +113,7 @@ int main()
     toyqueue *q = toyqueue_new(1000);
 
     for (int i = 0; i < array_size(all_bags); i++)
-        count += contains_shiny_gold(array_ref(all_bags, i), bags_tree, set, q, shiny_gold_hash);
+        count += contains_shiny_gold(array_ref(all_bags, i), bags_tree, status_tree, q, shiny_gold_hash);
 
     printf("%d\n", count);
 
