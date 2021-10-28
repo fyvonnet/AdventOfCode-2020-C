@@ -31,10 +31,10 @@ int main()
     int diff1 = 0, diff3 = 0;
 
     for (int i = 0; i < array_size(input) - 1; i++)
-        if (array_ref(input, 1 + i) - array_ref(input, i) == 1)
-            diff1++;
-        else if (array_ref(input, 1 + i) - array_ref(input, i) == 3)
-            diff3++;
+        switch (array_ref(input, 1 + i) - array_ref(input, i)) {
+            case 1: diff1++; break;
+            case 3: diff3++; break;
+        }
 
     printf("%d\n", diff1 * diff3);
 
