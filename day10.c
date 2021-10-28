@@ -38,6 +38,16 @@ int main()
 
     printf("%d\n", diff1 * diff3);
 
+    long long *npaths = calloc(array_size(input), sizeof(long long));
+    npaths[0] = 1;
+
+    for (int i = 0; i < array_size(input) - 1; i++)
+        for (int j = 1; (j <= 3) && (i + j < array_size(input)); j++)
+            if (array_ref(input, i + j) - array_ref(input, i) <= 3)
+                npaths[i + j] += npaths[i];
+
+    printf("%lld\n", npaths[array_size(input) - 1]);
+
     return(EXIT_SUCCESS);
 }
 
