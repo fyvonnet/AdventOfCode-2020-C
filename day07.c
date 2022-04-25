@@ -2,25 +2,39 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include <pcre.h>
 #include <toylib.h>
 
 #define OVECMAX 15
 
 
-typedef struct { int qt; uintptr_t name; } contained_bags;
-typedef array_type(uintptr_t) array_int;
 typedef enum { CONTAINS, DOESNT_CONTAIN, UNKNOWN } bag_status;
+typedef intptr_t bag_name;
+typedef array_type(char*) array_string;
+typedef struct {
+    bag_name name;
+    bag_name cnames[6];
+    int cqts[6];
+    bag_status status;
+} bags_array_elm;
+
+bags_array_elm *bags_array;
+int input_len;
+bag_name shiny_gold_hash;
 
 
-int compare (const void *a, const void *b)
+int compare_bags(const void *a, const void *b)
 {
-    return (uintptr_t)a - (uintptr_t)b;
+    bag_name x = ((bags_array_elm *)a)->name;
+    bag_name y = ((bags_array_elm *)b)->name;
+
+    return (x > y) - (x < y);
 }
 
-uintptr_t get_match_hash(char *str, int a, int b)
+bag_name get_match_hash(char *str, int a, int b)
 {
-    uintptr_t hash = 5381;
+    bag_name hash = 5381;
 
     for (int i = a; i < b; i++)
         hash = (hash * 33) + str[i];
@@ -38,105 +52,124 @@ int get_match_int(char *str, int a, int b)
     return n;
 }
 
-int contains_shiny_gold(uintptr_t bag, toytree *bags_tree, toytree *status_tree, toyqueue *q, uintptr_t shiny_gold_hash)
+int get_index(bag_name name)
 {
-    toyqueue_reset(q);
-    toyqueue_enqueue(q, (void *)bag);
+    int low = 0;
+    int hi  = input_len - 1;
 
-    while (!toyqueue_empty(q)) {
-        contained_bags *cbs = toytree_search(bags_tree, toyqueue_dequeue(q));
-        uintptr_t name;
+    for (;;) {
+        int mid = low + round((hi - low) / 2);
 
-        if (cbs)
-            for (int i = 0; (name = cbs[i].name); i++) {
-                bag_status status = (uintptr_t)toytree_search(status_tree, (void *)name);
-                if ((status == CONTAINS) || (name == shiny_gold_hash)) {
-                    toytree_insert(status_tree, (void *)bag, (void *)CONTAINS);
-                    return 1;
-                }
-                else if (status == UNKNOWN)
-                    toyqueue_enqueue(q, (void *)name);
-            }
+        bags_array_elm *bag = bags_array + mid;
+
+        if (bag->name < name)
+            low = mid + 1;
+        else if (bag->name > name)
+            hi = mid - 1;
+        else
+            return mid;
     }
-    toytree_insert(status_tree, (void *)bag, (void *)DOESNT_CONTAIN);
-    return 0;
 }
 
+bag_status contains_shiny_gold(bag_name name) 
+{
+    bags_array_elm *bag = bags_array + get_index(name);
+
+    if (bag->status == UNKNOWN) {
+        for (int i = 0; bag->cnames[i] != 0; i++)
+            if ((bag->cnames[i] == shiny_gold_hash) || (contains_shiny_gold(bag->cnames[i]) == CONTAINS)) {
+                bag->status = CONTAINS;
+                return CONTAINS;
+            }
+        bag->status = DOESNT_CONTAIN;
+
+    }
+
+    return bag->status;
+}
+
+int count_bags(bag_name name)
+{
+    int count = 0;
+    bags_array_elm *bag = bags_array + get_index(name);
+
+    for (int i = 0; bag->cnames[i] != 0; i++)
+        count += bag->cqts[i] * (1 + count_bags(bag->cnames[i]));
+
+    return count;
+}
 
 int main()
 {
+    array_string input;
+    array_init(input);
+
+    char shiny_gold_str[] = "shiny gold";
+    shiny_gold_hash = get_match_hash(shiny_gold_str, 0, strlen(shiny_gold_str));
+
+    FILE *fp = fopen("inputs/day07", "r");
+    size_t r = 0;
+
+    while (r != -1) {
+        char *buffer = NULL;
+        size_t n = 0;
+        r = getline(&buffer, &n, fp);
+        if (r != -1)
+            array_add(input, char*, buffer);
+    }
+
+    fclose(fp);
+
+    input_len = array_size(input);
+    bags_array = (bags_array_elm *)malloc(input_len * sizeof(bags_array_elm));
+
+
     static char pattern[] = "^(.*) bags contain (.*)\\.$";
     static char pattern2[] = "(\\d+) (.+) bag";
     const char *err_msg;
     int err;
     int offsets[OVECMAX];
-    char *buffer = NULL;
-    size_t n = 0;
-    char shiny_gold_str[] = "shiny gold";
-    uintptr_t shiny_gold_hash = get_match_hash(shiny_gold_str, 0, strlen(shiny_gold_str));
-
     pcre *re  = pcre_compile(pattern,  0, &err_msg, &err, NULL);
     pcre *re2 = pcre_compile(pattern2, 0, &err_msg, &err, NULL);
-    FILE *fp = fopen("inputs/day07", "r");
-    toytree *bags_tree   = toytree_new(compare, NULL);
-    toytree *status_tree = toytree_new(compare, (void *)UNKNOWN);
 
-    array_int all_bags;
-    array_init(all_bags);
-
-    while (getline(&buffer, &n, fp) != EOF) {
-        pcre_exec(re, NULL, buffer, strlen(buffer), 0, 0, offsets, OVECMAX);
-        uintptr_t bag_name = get_match_hash(buffer, offsets[2], offsets[3]);
-        char *bags = buffer + offsets[4];
+    for (int i = 0; i < input_len; i++) {
+        char *line = array_ref(input, i);
+        pcre_exec(re, NULL, line, strlen(line), 0, 0, offsets, OVECMAX);
+        bag_name name = get_match_hash(line, offsets[2], offsets[3]);
+        bags_array_elm *elm = bags_array + i;
+        elm->name = name;
+        char *bags = line + offsets[4];
 
         if (strncmp(bags, "no other bags", 13)) {
             char *token = strtok(bags, ",");
-            contained_bags *cbs = malloc(6 * sizeof(contained_bags));
-            int i = 0;
+            int j = 0;
 
-            array_add(all_bags, uintptr_t, bag_name);
-
-            for (i = 0; token != NULL; i++) {
+            while (token != NULL) {
                 pcre_exec(re2, NULL, token, strlen(token), 0, 0, offsets, OVECMAX);
-                cbs[i].qt   = get_match_int(token, offsets[2], offsets[3]);
-                cbs[i].name = get_match_hash(token, offsets[4], offsets[5]);
+                elm->cqts[j]   = get_match_int(token, offsets[2], offsets[3]);
+                elm->cnames[j] = get_match_hash(token, offsets[4], offsets[5]);
                 token = strtok(NULL, ",");
+                j++;
             }
 
-            cbs[i].name = 0;
-            toytree_insert(bags_tree, (void *)bag_name, cbs);
+            elm->cnames[j] = 0;
+            elm->status = UNKNOWN;
         }
-        buffer = NULL; n = 0;
+        else {
+            elm->status = DOESNT_CONTAIN;
+            elm->cnames[0] = 0;
+        }
     }
 
-    int count = 0;
-    toyqueue *q = toyqueue_new(1000);
+    qsort(bags_array, input_len, sizeof(bags_array_elm), compare_bags);
 
-    for (int i = 0; i < array_size(all_bags); i++)
-        count += contains_shiny_gold(array_ref(all_bags, i), bags_tree, status_tree, q, shiny_gold_hash);
+    int counter = 0;
 
-    printf("%d\n", count);
+    for (int i = 0; i < input_len; i++)
+        if (contains_shiny_gold(bags_array[i].name) == CONTAINS)
+            counter++;
 
-    toyqueue_reset(q);
-    count = -1;
-    toyqueue_enqueue(q, (void *)1);
-    toyqueue_enqueue(q, (void *)shiny_gold_hash);
-
-    while (!toyqueue_empty(q)) {
-        int qt = (uintptr_t)toyqueue_dequeue(q);
-        uintptr_t name = (uintptr_t)toyqueue_dequeue(q);
-
-        count += qt;
-        contained_bags *bags = toytree_search(bags_tree, (void *)name);
-
-        if (bags)
-            for (int i = 0; bags[i].name != 0; i++) {
-                toyqueue_enqueue(q, (void *)(uintptr_t)(qt * bags[i].qt));
-                toyqueue_enqueue(q, (void *)bags[i].name);
-            }
-    }
-
-    printf("%d\n", count);
+    printf("%d\n%d\n", counter, count_bags(shiny_gold_hash));
 
     return(EXIT_SUCCESS);
 }
