@@ -88,17 +88,6 @@ bag_status contains_shiny_gold(bag_name name)
     return bag->status;
 }
 
-int count_bags(bag_name name)
-{
-    int count = 0;
-    bags_array_elm *bag = bags_array + get_index(name);
-
-    for (int i = 0; bag->cnames[i] != 0; i++)
-        count += bag->cqts[i] * (1 + count_bags(bag->cnames[i]));
-
-    return count;
-}
-
 int main()
 {
     array_string input;
@@ -169,7 +158,26 @@ int main()
         if (contains_shiny_gold(bags_array[i].name) == CONTAINS)
             counter++;
 
-    printf("%d\n%d\n", counter, count_bags(shiny_gold_hash));
+    printf("%d\n", counter);
+
+    toystack *stack = toystack_new(1000);
+    toystack_push(stack, (void *)1);
+    toystack_push(stack, (void *)shiny_gold_hash);
+    counter = -1;
+
+    while (!toystack_empty(stack)) {
+        int bag_index = get_index((bag_name)toystack_pop(stack));
+        int multiplier = (int)(uintptr_t)toystack_pop(stack);
+        counter += multiplier;
+        bags_array_elm *bag = bags_array + bag_index;
+        for (int i = 0; bag->cnames[i] != 0; i++) {
+            toystack_push(stack, (void *)(multiplier * bag->cqts[i]));
+            toystack_push(stack, (void *)bag->cnames[i]);
+        }
+    }
+
+    printf("%d\n", counter);
+
 
     return(EXIT_SUCCESS);
 }
